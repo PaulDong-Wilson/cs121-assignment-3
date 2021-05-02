@@ -43,13 +43,16 @@ def addPage_index_file(key, url, freq):
             list = line.split("; ")
             if list[0] == key:
                 exists = True
-                #numberOfPages = list[1]
-                #pages = list[2:]
+                numberOfPages = list[1]
+                pages = list[2:]
 
                 #output += key + "; " + list[1]+1
                 #for page in pages:
                 #    output += "; " + page
-                output += key + "; " + str(int(list[1])+1) + "; " + url + ", " + str(freq) + "\n"
+                output += key + "; " + str(int(numberOfPages)+1) + "; "
+                for page in pages:
+                    output += page + "; "
+                output += url + ", " + str(freq) + "\n"
             else:
                 output += line + "\n"
         file.close()
