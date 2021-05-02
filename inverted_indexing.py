@@ -1,88 +1,76 @@
-import re, os, nltk, json, requests, sys, time
+import re, os, json
 from bs4 import BeautifulSoup
 from nltk.stem import PorterStemmer
 from collections import defaultdict
-import ast
-import math
+from urllib.parse import urldefrag
+
+indexed_docs_count = 0                      # Total number of documents
+
 
 def indexing():
+    # So that the total number of indexed documents can be changed
     global indexed_docs_count
-    global inverted_dict
-    global document_id
 
     ## list of HTML tags for important text:
-    HTML_tags = ['b', 'strong', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'title']     #<b>:  Defines bold text
-                                                                                            # <strong>: Defines important text 
-                                                                                            # <h1> to <h6>: Defines HTML headings
-                                                                                            # <title>: Defines a title for the document
-    ## Treverse each JSON file and tokenize
-    saving_path = os.path.join(os.getcwd(), "paths.txt")
+    HTML_tags = ['b', 'strong', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'title', 'p']     # <b>:  Defines bold text
+                                                                                      # <strong>: Defines important text
+                                                                                      # <h1> to <h6>: Defines HTML headings
+                                                                                      # <title>: Defines a title for the document
+                                                                                      # <p>: Defines standard paragraph text
 
-    path = os.getcwd() + '\\DEV'
+    # Get the path for the collection
+    collection_path = os.path.join(os.getcwd() + f"{os.path.sep}DEV")
 
-    for folder, subfolders, files in os.walk(path):
+    # Loop through the sub-folders of the collection
+    for folder, subfolders, files in os.walk(collection_path):
+        # Loop through the files in the next sub-folder
         for each_file in files:
-            # create set for holding important text for different tags
-            important_text = set()
-            # create set for stemmers
-            stemming_set = defaultdict(int)
-            path = os.path.join(folder, each_file)
+            # To hold the text associations and the document's url
+            text_map = defaultdict(list)
+            url = ""
+
+            # Get the path to the file
+            file_path = os.path.join(folder, each_file)
 
             # Open JSON file
-            with open (path, 'r', encoding = "utf8") as json_file: #encode in utf8
+            with open(file_path, 'r', encoding = "utf8") as json_file: #encode in utf8
                 json_content = json.load(json_file) # takes a file object json_file and returns the json object
-                url = json_content['url']
 
+                # Parse out the document url and remove its fragment (if any)
+                url = urldefrag(json_content['url'])[0]
+
+                # Parse out the document content and parse its HTML
                 soup = BeautifulSoup(json_content['content'], 'lxml')
-                content = soup.get_text()
 
                 # Tokenizing and stemming using Porter Stemmer
                 ps = PorterStemmer()
-                words_collection = [] #all the words
 
-                for token in re.split('[^a-zA-Z0-9]', content):
-                    if token.isalnum() and len(token) > 2: #sequence character and len >=3
-                        # add token to list words_collection
-                        words_collection.append(token)
-                        # apply Porter stemmer for this token
-                        token_stem = ps.stem(token.lower())
-                        # add token_stem to stemming set
-                        stemming_set[token_stem] += 1
+                # Loop through the different important HTML tags for text
+                for next_tag in HTML_tags:
+                    # Find all content under the next tag
+                    for next_tag_content in soup.find_all(next_tag):
+                        # Get the text from this tag's content
+                        next_tag_text = next_tag_content.get_text()
 
-                # add important text from list HTML tags
-                for i in soup.find_all(HTML_tags):
-                    line = i.get_text()
-                    #split each line ang get token
-                    for token_tag in re.split('[^a-zA-Z0-9]', line):
-                        if token_tag.isalnum() and len(token_tag) > 2: #sequence character and len >=3
-                            # apply Porter stemmer for this token_tag
-                            token_tag_stem = ps.stem(token_tag.lower())
-                            # add token_tag_stem to important_text set
-                            important_text.add(token_tag_stem)
-                
-                # write key, url, path to file
-                with open(saving_path, 'a+', encoding="utf8") as f: # read and adding
-                    writing_file = f"{{'{document_id}': [{repr(url)}, {repr(path)}]}}"
-                    f.write(writing_file + "\n")
+                        # Split the text into alphanumeric sequences, stem them, and add them to the text map under
+                        # the current tag
+                        for next_token in re.split('[^a-zA-Z0-9]', next_tag_text):
+                            token_stem = ps.stem(next_token.lower())
+                            if token_stem.isalnum() and len(token_stem) > 2: #sequence character and len >=3
+                                text_map[next_tag].append(token_stem)
 
-                # Iterate through the set
-                #for stem in stemming_set:
-                    #inverted_dict[stem].append(document_id)
-                indexed_docs_count += 1
-                document_id += 1
-    print("\n important text: ", important_text)
+            # Increment the number of indexed documents, then yield its url and text map
+            indexed_docs_count += 1
+            yield url, text_map
+
       
 if __name__ == "__main__":
-    indexed_docs_count = 0                      # Total number of documents
-    #inverted_dict = defaultdict(list)        # Inverted index
-    document_id = 1                     # Continuous value of document_id, starting at 1
-
-    indexing()
+    for next_url, next_text_map in indexing():
+        # print(f"({repr(next_url)}, {next_text_map})")
+        pass
 
     # Print number of indexed document
     print("\nNumber of indexed document:", indexed_docs_count)
-    #print("\nimportant text:", document_id)
-    #print("inverted_dict: ", inverted_dict)
 
    
 
