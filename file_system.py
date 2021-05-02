@@ -49,7 +49,7 @@ def addPage_index_file(key, url, freq):
                 #output += key + "; " + list[1]+1
                 #for page in pages:
                 #    output += "; " + page
-                output += line + "; " + url + ", " + str(freq) + "\n"
+                output += key + "; " + str(int(list[1])+1) + "; " + url + ", " + str(freq) + "\n"
             else:
                 output += line + "\n"
         file.close()
