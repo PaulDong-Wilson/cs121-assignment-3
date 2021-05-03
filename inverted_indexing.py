@@ -36,6 +36,13 @@ def indexing():
             with open(file_path, 'r', encoding = "utf8") as json_file: #encode in utf8
                 json_content = json.load(json_file) # takes a file object json_file and returns the json object
 
+                # Get the encoding for the current document content
+                encoding = json_content["encoding"].strip().lower()
+
+                # If the encoding is not a known English/Latin encoding, skip the document
+                if encoding not in {"utf-8", "ascii", "iso-8859-1", "windows-1252", "utf-16", "utf-8-sig"}:
+                    continue
+
                 # Parse out the document url and remove its fragment (if any)
                 url = urldefrag(json_content['url'])[0]
 
@@ -52,11 +59,15 @@ def indexing():
                         # Get the text from this tag's content
                         next_tag_text = next_tag_content.get_text()
 
-                        # Split the text into alphanumeric sequences, stem them, and add them to the text map under
-                        # the current tag
-                        for next_token in re.split('[^a-zA-Z0-9]', next_tag_text):
-                            token_stem = ps.stem(next_token.lower())
-                            if token_stem.isalnum() and len(token_stem) > 2: #sequence character and len >=3
+                        # Process the tokens and add them under the current tag
+                        for next_token in re.split(r"[\s\-–]", next_tag_text):
+                            next_token = next_token.lower() # Set tokens to lower case
+                            next_token = re.sub(r"[.,?:!;()\[\]{}\"']", "", next_token) # Remove special characters
+                            token_stem = ps.stem(next_token) # Stem the tokens
+
+                            # If, after processing, the next token is not empty, and only contains alphanumeric
+                            # characters, add the token under the current tag
+                            if re.match(r"^[a-z0-9]+$", next_token) is not None:
                                 text_map[next_tag].append(token_stem)
 
             # Increment the number of indexed documents, then yield its url and text map
