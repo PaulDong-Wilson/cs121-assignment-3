@@ -54,12 +54,17 @@ def run_indexer() -> None:
 
     # Get the url and text map for each document in the collection (one at a time)
     for next_url, next_text_map in inverted_indexing.indexing():
+        # Assign an id to the next url (based on how many documents have been downloaded already), and save the
+        # id and url association to the document_ids file
+        with open("document_ids.txt", "a") as document_id_stream:
+            print(f"{inverted_indexing.indexed_docs_count}; {next_url}", file=document_id_stream)
+
         # Get the token frequencies for all works in the text map
         token_frequencies = ranker.rank_document(next_text_map)
 
         # Add the postings for the ranked tokens to the postings list
         for next_token, next_frequency in token_frequencies.items():
-            postings.append((next_token, next_url, next_frequency))
+            postings.append((next_token, str(inverted_indexing.indexed_docs_count), next_frequency))
 
         # If 10000 documents have been processed since the last set of batches were sent to the file system--
         if docs_since_last_indexing >= 10000:
@@ -93,7 +98,7 @@ if __name__ == "__main__":
 
     # Calculate the size of the resulting index on disk (in KBs)
     # File size calculation setup adapted from https://amiradata.com/python-get-file-size-in-kb-mb-or-gb/
-    files = ["index_0-9.txt", "index_a-f.txt", "index_g-m.txt", "index_n-s.txt", "index_t-z.txt"]
+    files = ["index_0-9.txt", "index_a-f.txt", "index_g-m.txt", "index_n-s.txt", "index_t-z.txt", "document_ids.txt"]
     file_system_size = round(sum(os.path.getsize(next_file) for next_file in files) / 1024, 3)
 
     # Printout the indexer report

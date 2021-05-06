@@ -7,6 +7,22 @@ from urllib.parse import urldefrag
 indexed_docs_count = 0                      # Total number of documents
 
 
+def tokenize(text: str) -> str:
+    # Stemming using Porter Stemmer
+    ps = PorterStemmer()
+
+    # Process the tokens and add them under the current tag
+    for next_token in re.split(r"[\s\-–]", text):
+        next_token = next_token.lower()  # Set tokens to lower case
+        next_token = re.sub(r"[.,?:!;()\[\]{}\"']", "", next_token)  # Remove special characters
+        token_stem = ps.stem(next_token)  # Stem the tokens
+
+        # If, after processing, the next token is not empty, and only contains alphanumeric
+        # characters, yield the current yoken
+        if re.match(r"^[a-z0-9]+$", next_token) is not None:
+            yield token_stem
+
+
 def indexing():
     # So that the total number of indexed documents can be changed
     global indexed_docs_count
@@ -49,9 +65,6 @@ def indexing():
                 # Parse out the document content and parse its HTML
                 soup = BeautifulSoup(json_content['content'], 'lxml')
 
-                # Tokenizing and stemming using Porter Stemmer
-                ps = PorterStemmer()
-
                 # Loop through the different important HTML tags for text
                 for next_tag in HTML_tags:
                     # Find all content under the next tag
@@ -60,15 +73,8 @@ def indexing():
                         next_tag_text = next_tag_content.get_text()
 
                         # Process the tokens and add them under the current tag
-                        for next_token in re.split(r"[\s\-–]", next_tag_text):
-                            next_token = next_token.lower() # Set tokens to lower case
-                            next_token = re.sub(r"[.,?:!;()\[\]{}\"']", "", next_token) # Remove special characters
-                            token_stem = ps.stem(next_token) # Stem the tokens
-
-                            # If, after processing, the next token is not empty, and only contains alphanumeric
-                            # characters, add the token under the current tag
-                            if re.match(r"^[a-z0-9]+$", next_token) is not None:
-                                text_map[next_tag].append(token_stem)
+                        for next_token in tokenize(next_tag_text):
+                            text_map[next_tag].append(next_token)
 
             # Increment the number of indexed documents, then yield its url and text map
             indexed_docs_count += 1
