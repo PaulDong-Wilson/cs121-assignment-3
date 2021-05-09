@@ -66,7 +66,7 @@ def addPage_index_file(keys, urls, freqs):
             for k in sorted(postingDict):
                 sortedPostings.append(postingDict[k]+", "+str(k))
 
-            df = docFreqs.get(key) + 1
+            df = int(docFreqs.get(key)) + 1
             docFreqs.update({key: df})
             # postings.append(str(url+", "+str(freq)))
             dic.update({key: sortedPostings})
