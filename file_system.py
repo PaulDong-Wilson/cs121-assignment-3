@@ -1,7 +1,7 @@
 
 # File structure
 #       -- each line is a token entry
-# key; doc_url, term_frequency; doc_url, term_frequency
+# key, doc_count; doc_id, term_frequency; doc_id, term_frequency
 def addPage_index_file(keys, urls, freqs):
     filename = ""
     indexInfo = ""
@@ -31,13 +31,15 @@ def addPage_index_file(keys, urls, freqs):
     file = ""
     # load in file into dic
     dic = {}
+    docFreqs = {}
     try :
         file = open(filename, "r")
         for line in file:
             line = line[:-1]  # strips newline from end of line
             list = line.split("; ")
-            postings = list[1:]
-            dic.update({list[0]: list[1:]})
+            t = list[0].split(", ")
+            docFreqs.update({t[0]: t[1]})
+            dic.update({t[0]: list[1:]})
     # if file doesn't exist create it
     except IOError:
         file = open(filename, "w")
@@ -49,10 +51,25 @@ def addPage_index_file(keys, urls, freqs):
         if postings == 500:
             arr = []
             arr.append(str(url+", "+str(freq)))
+            docFreqs.update({key: 1})
             dic.update({key: arr})
         else:
-            postings.append(str(url+", "+str(freq)))
-            dic.update({key: postings})
+            # sort postings
+            urlList = []
+            freqList = []
+            postingDict = {freq: url}
+            for posting in postings:
+                p = posting.split(", ")
+                postingDict.update({int(p[1]): p[0]})
+
+            sortedPostings = []
+            for k in sorted(postingDict):
+                sortedPostings.append(postingDict[k]+", "+str(k))
+
+            df = docFreqs.get(key) + 1
+            docFreqs.update({key: df})
+            # postings.append(str(url+", "+str(freq)))
+            dic.update({key: sortedPostings})
 
     # write dic to file
     file = open(filename, "w")
@@ -62,7 +79,7 @@ def addPage_index_file(keys, urls, freqs):
             postings = "; ".join(dic.get(token))
         except TypeError:
             postings
-        file.write(token+"; "+postings+"\n")
+        file.write(token+", "+str(docFreqs.get(token))+"; "+postings+"\n")
     file.close()
 
     # update index_info file
@@ -83,7 +100,7 @@ def get_index_total():
         return 0
 
 # returns list of pages associated with given token
-# return value = ["dev_url1, term_freq1", "dev_url2, term_freq2", ...]
+# return value = ["token, doc_count", "doc_id1, term_freq1", "doc_id2, term_freq2", ...]
 def get_pages(token):
     # finds what file the key would be in
     x = token[0].lower()
@@ -102,11 +119,11 @@ def get_pages(token):
     for line in file:
         line = line[:-1]
         # line anatomy:
-        # key; doc_url1, term_freq1; doc_url2, term_freq2
+        # key, doc_count; doc_id, term_frequency; doc_id, term_frequency
         list = line.split("; ")
-        if list[0] == token:
+        if list[0].split(", ")[0] == token:
             file.close()
-            return list[1:]
+            return list
     file.close()
     return False
 
