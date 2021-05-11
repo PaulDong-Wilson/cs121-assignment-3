@@ -17,14 +17,21 @@
       <!--Flash setup adapted from https://www.tutorialspoint.com/flask/flask_quick_guide.htm -->
       <!--Get the flashed messages from the server-->
       {% with messages = get_flashed_messages() %}
-      <!--Print the search query the results are for-->
-      <h4>{{messages[0]}}</h4>
-         <ul>
-             <!--Print each link retrieved for the specified search query-->
-             {% for message in messages[1:-1] %}
-             <li>{{ message }}</li>
-             {% endfor %}
-         </ul>
+      <!--If only one message was flashed to the webserver-->
+      {% if messages|length == 2 %}
+          <!--No results were obtained from the query, print as such-->
+          <h4>{{messages[0]}}</h4>
+      <!--Otherwise, results were received-->
+      {% else %}
+          <!--Print the search query the results are for-->
+          <h4>{{messages[0]}}</h4>
+             <ul>
+                 <!--Print each link retrieved for the specified search query-->
+                 {% for message in messages[1:-1] %}
+                 <li><a href={{ message }}>{{ message }}</a></li>
+                 {% endfor %}
+             </ul>
+      {% endif %}
       <!--Print the time taken to retrieve the links for the query-->
       <p>{{messages[-1]}}</p>
       {% endwith %}

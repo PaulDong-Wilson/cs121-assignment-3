@@ -1,26 +1,9 @@
 from flask import Flask, flash, render_template, request
+from search_query import find_search_query
 from stopwatch import Stopwatch
 
 # To hold the file location for document IDs
 document_id_file = "document_ids.txt"
-
-
-def test_response(num_links: int) -> [str]:
-    """
-    TESTING FUNCTION PLEASE IGNORE
-
-    TODO DELETE AFTER LINK RETRIEVAL IS IMPLEMENTED
-
-    :param num_links: The number of fake links to return.
-    :return: A list of fake links for testing purposes.
-    """
-    for i in range(10000000):
-        pass
-
-    if num_links <= 0:
-        return []
-
-    return [f"Link {i}" for i in range(1, num_links + 1)]
 
 
 # Web UI setup adapted from:
@@ -51,20 +34,29 @@ def create_app(test_config=None):
             # Create a watch for timing link retrieval
             watch = Stopwatch()
 
-            # Flash the current query to the search_engine.html page
-            flash(f"Results for query: {request.form['query']}")
+            # Get and strip the query received
+            search_query = request.form['query'].strip()
 
-            # Retrieve the links for the given query, while also timing it
+            # Retrieve the document ids for the given query and lookup their associated urls, while also timing it
             watch.start()
-            retrieved_links = test_response(5) # TODO Replace with link retrieval implementation once finished
+            retrieved_ids = find_search_query(search_query)
+            associated_urls = [document_id_lookups[next_id] for next_id in retrieved_ids]
             watch.stop()
 
-            # Flash each retrieved link to the search_engine.html page
-            for next_link in retrieved_links:
-                flash(next_link)
+            # If no results were obtained, flash as much to the webserver
+            if len(associated_urls) == 0:
+                flash(f"No results for query: {search_query}")
+            # Otherwise, flash the results
+            else:
+                # Flash the current query to the search_engine.html page
+                flash(f"Results for query: {search_query}")
+
+                # Flash each retrieved link to the search_engine.html page
+                for next_link in associated_urls:
+                    flash(next_link)
 
             # Flash the time taken for the link retrieval to the search_engine.html page
-            flash(f"Time taken for search retrieval: {round(watch.read(), 5)} seconds")
+            flash(f"Time taken for search retrieval: {round(watch.read() * 1000)} ms")
 
         # When http://127.0.0.1:5000/ is accessed, render the search_engine.html page in the templates directory
         return render_template("search_engine.html")
