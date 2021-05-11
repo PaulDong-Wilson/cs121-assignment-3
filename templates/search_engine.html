@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>INF 141/CS 121 Assignment 3: Search Engine</title>
+</head>
+<body>
+
+      <h1>Search Engine</h1>
+      <!--Allow users to enter a search query, the results of which will then appear below-->
+      <h3>Enter your search query</h3>
+      <form action = "http://localhost:5000/" method = "POST" enctype = "multipart/form-data">
+         <input type = 'text' name = 'query' size = 144/>
+         <input type = "submit"/>
+      </form>
+
+      <!--Flash setup adapted from https://www.tutorialspoint.com/flask/flask_quick_guide.htm -->
+      <!--Get the flashed messages from the server-->
+      {% with messages = get_flashed_messages() %}
+      <!--Print the search query the results are for-->
+      <h4>{{messages[0]}}</h4>
+         <ul>
+             <!--Print each link retrieved for the specified search query-->
+             {% for message in messages[1:-1] %}
+             <li>{{ message }}</li>
+             {% endfor %}
+         </ul>
+      <!--Print the time taken to retrieve the links for the query-->
+      <p>{{messages[-1]}}</p>
+      {% endwith %}
+</body>
+</html>

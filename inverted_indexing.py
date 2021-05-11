@@ -18,7 +18,7 @@ def tokenize(text: str) -> str:
         token_stem = ps.stem(next_token)  # Stem the tokens
 
         # If, after processing, the next token is not empty, and only contains alphanumeric
-        # characters, yield the current yoken
+        # characters, yield the current token
         if re.match(r"^[a-z0-9]+$", next_token) is not None:
             yield token_stem
 
