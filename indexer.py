@@ -52,6 +52,18 @@ def run_indexer() -> None:
     # Used for determining when to send the next batches to the file system
     docs_since_last_indexing = 0
 
+    # Weights for terms under specific HTML tags
+    tag_weights = {"title": 100,
+                   "h1": 50,
+                   "h2": 45,
+                   "h3": 40,
+                   "h4": 35,
+                   "h5": 30,
+                   "h6": 25,
+                   "b": 5,
+                   "strong": 5,
+                   "p": 1}
+
     # Get the url and text map for each document in the collection (one at a time)
     for next_url, next_text_map in inverted_indexing.indexing():
         # Assign an id to the next url (based on how many documents have been downloaded already), and save the
@@ -59,8 +71,8 @@ def run_indexer() -> None:
         with open("document_ids.txt", "a") as document_id_stream:
             print(f"{inverted_indexing.indexed_docs_count}; {next_url}", file=document_id_stream)
 
-        # Get the token frequencies for all works in the text map
-        token_frequencies = ranker.rank_document(next_text_map)
+        # Get the token frequencies for all works in the text map, given the tag weights
+        token_frequencies = ranker.rank_document(next_text_map, tag_weights)
 
         # Add the postings for the ranked tokens to the postings list
         for next_token, next_frequency in token_frequencies.items():
