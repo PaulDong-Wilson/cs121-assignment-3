@@ -111,6 +111,9 @@ if __name__ == "__main__":
     # Save the amount of documents indexed from the collection
     file_system.make_index_info()
 
+    # add tf-idf scores to the whole index
+    file_system.add_tf_idf()
+
     # Calculate the size of the resulting index on disk (in KBs)
     # File size calculation setup adapted from https://amiradata.com/python-get-file-size-in-kb-mb-or-gb/
     files = ["index_0-9.txt", "index_a-f.txt", "index_g-m.txt", "index_n-s.txt", "index_t-z.txt", "document_ids.txt"]

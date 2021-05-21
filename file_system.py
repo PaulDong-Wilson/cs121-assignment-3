@@ -1,3 +1,4 @@
+import ranker
 
 # File structure
 #       -- each line is a token entry
@@ -44,8 +45,6 @@ def addPage_index_file(keys, urls, freqs):
             dic.update({key: arr})
         else:
             # sort postings
-            urlList = []
-            freqList = []
             postingDict = {url: freq}
             for posting in postings:
                 p = posting.split(", ")
@@ -70,6 +69,49 @@ def addPage_index_file(keys, urls, freqs):
             postings
         file.write(token+", "+str(docFreqs.get(token))+"; "+postings+"\n")
     file.close()
+
+# updates whole index to include tf-idf for each docID, tf pair
+# key, df; docID, tf, tf-idf; ...
+def add_tf_idf():
+    files = ["index_0-9.txt","index_a-f.txt","index_g-m.txt","index_n-s.txt","index_t-z.txt"]
+    collection_size = get_index_total()
+    for file in files:
+        # load in file into dict
+        dict = {}
+        docFreqs = {}
+        index = open(file, "r")
+
+        # reads index file line by line
+        for line in index:
+            line = line[:-1]  # strips newline from end of line
+            list = line.split("; ")
+            t = list[0].split(", ")[1]
+            df = int(t[1])
+            postings = list[1:]
+            new_postings = []
+
+            # adds tf-idf to posting pair
+            for posting in postings:
+                arr = posting.split(", ")
+                docId = arr[0]
+                tf = int(arr[1])
+                tf_idf = ranker.calculate_tf_idf_weight(tf, df, collection_size)
+                new_postings.append(docId+", "+str(tf)+", "+str(tf_idf))
+
+            docFreqs.update({t[0]: t[1]})
+            dict.update({t[0]: new_postings})
+        index.close()
+        index = open(file, "w")
+
+        # updates index file
+        for token in dict:
+            postings = ""
+            try:
+                postings = "; ".join(dict.get(token))
+            except TypeError:
+                postings
+            index.write(token + ", " + str(docFreqs.get(token)) + "; " + postings + "\n")
+        index.close()
 
 
 # returns the total number of pages indexed
