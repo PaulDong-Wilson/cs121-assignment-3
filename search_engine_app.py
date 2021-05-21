@@ -1,5 +1,5 @@
 from flask import Flask, flash, render_template, request
-from search_query import find_search_query
+from search_query import ranked_search_query
 from stopwatch import Stopwatch
 
 # To hold the file location for document IDs
@@ -39,7 +39,7 @@ def create_app(test_config=None):
 
             # Retrieve the document ids for the given query and lookup their associated urls, while also timing it
             watch.start()
-            retrieved_ids = find_search_query(search_query)
+            retrieved_ids = ranked_search_query(search_query)
             associated_urls = [document_id_lookups[next_id] for next_id in retrieved_ids]
             watch.stop()
 
