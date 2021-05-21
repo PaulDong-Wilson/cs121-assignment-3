@@ -96,6 +96,9 @@ if __name__ == "__main__":
     # Run the indexer and report the total amount of documents indexed, and the amount of unique words seen
     run_indexer()
 
+    # Save the amount of documents indexed from the collection
+    file_system.make_index_info()
+
     # Calculate the size of the resulting index on disk (in KBs)
     # File size calculation setup adapted from https://amiradata.com/python-get-file-size-in-kb-mb-or-gb/
     files = ["index_0-9.txt", "index_a-f.txt", "index_g-m.txt", "index_n-s.txt", "index_t-z.txt", "document_ids.txt"]
