@@ -44,29 +44,29 @@ def addPage_index_file(keys, urls, freqs):
             docFreqs.update({key: 1})
             dic.update({key: arr})
         else:
-            # sort postings
-            postingDict = {url: freq}
-            for posting in postings:
-                p = posting.split(", ")
-                postingDict.update({p[0]: int(p[1])})
-
-            sortedPostings = []
-            for k in sorted(postingDict, key=lambda x: (int(x))):
-                sortedPostings.append(k+", "+str(postingDict[k]))
-
             df = int(docFreqs.get(key)) + 1
             docFreqs.update({key: df})
-            # postings.append(str(url+", "+str(freq)))
-            dic.update({key: sortedPostings})
+            postings.append(str(url+", "+str(freq)))
+            dic.update({key: postings})
 
     # write dic to file
     file = open(filename, "w")
-    for token in dic:
+    for token, postings in dic.items():
+        # sort postings
+        postingDict = {}
+        for posting in postings:
+            p = posting.split(", ")
+            postingDict.update({p[0]: int(p[1])})
+
+        sortedPostings = []
+        for k in sorted(postingDict, key=lambda x: (int(x))):
+            sortedPostings.append(k + ", " + str(postingDict[k]))
+
         postings = ""
         try:
-            postings = "; ".join(dic.get(token))
+            postings = "; ".join(sortedPostings)
         except TypeError:
-            postings
+            pass
         file.write(token+", "+str(docFreqs.get(token))+"; "+postings+"\n")
     file.close()
 
@@ -85,8 +85,8 @@ def add_tf_idf():
         for line in index:
             line = line[:-1]  # strips newline from end of line
             list = line.split("; ")
-            t = list[0].split(", ")[1]
-            df = int(t[1])
+            term_info = list[0].split(", ")
+            t, df = term_info[0], int(term_info[1])
             postings = list[1:]
             new_postings = []
 
@@ -96,10 +96,10 @@ def add_tf_idf():
                 docId = arr[0]
                 tf = int(arr[1])
                 tf_idf = ranker.calculate_tf_idf_weight(tf, df, collection_size)
-                new_postings.append(docId+", "+str(tf)+", "+str(tf_idf))
+                new_postings.append(docId+", "+str(tf)+", "+str(round(tf_idf, 3)))
 
-            docFreqs.update({t[0]: t[1]})
-            dict.update({t[0]: new_postings})
+            docFreqs.update({t: df})
+            dict.update({t: new_postings})
         index.close()
         index = open(file, "w")
 
@@ -135,8 +135,8 @@ def make_index_info():
 def get_index_total():
     try:
         indexInfo = open("index_info.txt", "r")
-        totalPageNum = indexInfo.readline()
-        return totalPageNum
+        totalPageNum = indexInfo.readline().rstrip()
+        return int(totalPageNum)
     except IOError:
         return 0
 
