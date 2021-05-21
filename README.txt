@@ -1,7 +1,7 @@
 To launch the indexer, run indexer.py.
 
-The index will consist of "document_ids.txt", "index_0-9.txt", "index_a-f.txt", "index_g-m.txt", "index_n-s.txt",
-and "index_t-z.txt".
+The index will consist of "document_ids.txt", "index_info.txt", "index_0-9.txt", "index_a-f.txt", "index_g-m.txt",
+"index_n-s.txt", and "index_t-z.txt".
 
 To launch the search engine, run search_engine_app.py.
 
