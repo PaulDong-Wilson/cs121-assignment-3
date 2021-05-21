@@ -4,17 +4,6 @@
 # key, doc_count; doc_id, term_frequency; doc_id, term_frequency
 def addPage_index_file(keys, urls, freqs):
     filename = ""
-    indexInfo = ""
-    totalPageNum = 0
-
-    try :
-        indexInfo = open("index_info.txt", "r")
-        totalPageNum = indexInfo.readline()
-    except IOError:
-        indexInfo = open("index_info.txt", "w")
-        indexInfo.write("0")
-
-    indexInfo.close()
 
     # finds what file the key would be in
     x = keys[0][0].lower()
@@ -82,13 +71,23 @@ def addPage_index_file(keys, urls, freqs):
         file.write(token+", "+str(docFreqs.get(token))+"; "+postings+"\n")
     file.close()
 
-    # update index_info file
-    indexInfo = open("index_info.txt", "w")
-    totalPageNum = int(totalPageNum) + len(keys)
-    indexInfo.write(str(totalPageNum))
-    indexInfo.close()
 
-
+# returns the total number of pages indexed
+def make_index_info():
+    try:
+        totalPageNum = 0;
+        file = open("document_ids.txt", "r")
+        for entry in file:
+            list = entry.split("; ")
+            if len(list) > 1:
+                totalPageNum = totalPageNum + 1
+        file.close()
+        file = open("index_info.txt", "w")
+        file.write(str(totalPageNum))
+        file.close()
+        return True
+    except IOError:
+        return False
 
 # returns the total number of pages indexed
 def get_index_total():
