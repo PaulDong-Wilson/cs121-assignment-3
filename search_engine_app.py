@@ -39,7 +39,7 @@ def create_app(test_config=None):
 
             # Retrieve the document ids for the given query and lookup their associated urls, while also timing it
             watch.start()
-            retrieved_ids = ranked_search_query(search_query)
+            retrieved_ids, file_retrieval_time, ranking_time = ranked_search_query(search_query)
             associated_urls = [document_id_lookups[next_id] for next_id in retrieved_ids]
             watch.stop()
 
@@ -56,7 +56,9 @@ def create_app(test_config=None):
                     flash(next_link)
 
             # Flash the time taken for the link retrieval to the search_engine.html page
-            flash(f"Time taken for search retrieval: {round(watch.read() * 1000)} ms")
+            flash(f"Time taken for file term retrieval: {file_retrieval_time} ms\n")
+            flash(f"Time taken for document ranking:    {ranking_time} ms\n")
+            flash(f"Total time taken:                   {round(watch.read() * 1000)} ms")
 
         # When http://127.0.0.1:5000/ is accessed, render the search_engine.html page in the templates directory
         return render_template("search_engine.html")

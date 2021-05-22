@@ -3,6 +3,7 @@ import file_system
 import math
 import heapq
 from collections import defaultdict
+from stopwatch import Stopwatch
 
 
 def normalize_vector(vector) -> None:
@@ -75,6 +76,11 @@ class DocumentVector:
 
 
 def ranked_search_query(search_query, number_of_documents: int = 10):
+    # To time the file retrieval and ranking individually
+    watch_file_retrieval = Stopwatch()
+    watch_ranking = Stopwatch()
+    watch_ranking.start()
+
     # To hold the frequency of each query term
     query_frequencies = defaultdict(int)
 
@@ -107,7 +113,11 @@ def ranked_search_query(search_query, number_of_documents: int = 10):
         next_score_map = {}
 
         # Get the posting for the current query term
+        watch_ranking.stop()
+        watch_file_retrieval.start()
         term_posting = file_system.get_pages(next_query_term)
+        watch_file_retrieval.stop()
+        watch_ranking.start()
 
         # If the token was found--
         if type(term_posting) is list:
@@ -152,7 +162,7 @@ def ranked_search_query(search_query, number_of_documents: int = 10):
     # Heapify the document scores into a MaxHeap
     heapq.heapify(document_scores_heap)
 
-    # Pop the required amount of results from the heap, then return them
+    # Pop the required amount of results from the heap, then return them, along with the timings for each section
     results = []
 
     for i in range(number_of_documents):
@@ -161,7 +171,9 @@ def ranked_search_query(search_query, number_of_documents: int = 10):
         except IndexError:
             break
 
-    return results
+    watch_ranking.stop()
+
+    return results, round(watch_file_retrieval.read() * 1000), round(watch_ranking.read() * 1000)
 
 
 def boolean_search_query(search_query, number_of_documents: int = 5):
