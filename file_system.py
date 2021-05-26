@@ -209,6 +209,15 @@ def get_pages_for_tokens(tokens: [str], filename: str):
     file.close()
     return returnList
 
+# combines all index files into 1 file called "index_combined.txt"
+def combine_index_files():
+    filenames = ["index_0-9.txt", "index_a-f.txt", "index_g-m.txt", "index_n-s.txt", "index_t-z.txt"]
+    with open("index_combined.txt", "w") as outfile:
+        for filename in filenames:
+            with open(filename, "r") as infile:
+                for line in infile:
+                    outfile.write(line)
+
 if __name__ == "__main__":
     x = get_index_total()
     print(x)
