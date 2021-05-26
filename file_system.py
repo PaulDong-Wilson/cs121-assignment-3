@@ -104,7 +104,7 @@ def add_tf_idf():
         index = open(file, "w")
 
         # updates index file
-        for token in dict:
+        for token in sorted(dict):
             postings = ""
             try:
                 postings = "; ".join(dict.get(token))
@@ -164,6 +164,14 @@ def get_pages(token):
     file.close()
     return False
 
+def is_not_in_index(query_token: str, index_token: str):
+    sortedStrings = sorted([query_token, index_token])
+    # if query_token is not in the index, then sortedStrings == [query_token, index_token]
+    if sortedStrings[0] == query_token:
+        return True
+    else:
+        return False
+
 def get_pages_for_tokens(tokens: [str], filename: str):
     """
             Calculates the cosine similarity this DocumentVector has with the specified query_vector.
@@ -183,7 +191,16 @@ def get_pages_for_tokens(tokens: [str], filename: str):
     for line in file:
         line = line[:-1]
         list = line.split("; ")
-        if list[0].split(", ")[0] == sortedTokens[count]:
+        index_token = list[0].split(", ")[0]
+
+        # checks if sortedTokens[count] exists in the list by comparing it to token
+        while is_not_in_index(sortedTokens[count], index_token):
+            count = count+1
+            if count == len(sortedTokens):
+                file.close()
+                return returnList
+
+        if index_token == sortedTokens[count]:
             count = count+1
             returnList.append(list)
             if count == len(sortedTokens):
