@@ -143,18 +143,19 @@ def ranked_search_query(search_query, number_of_documents: int = 10):
     print("TEST: sieve time = ", round(watch_TEST_SIEVE.read() * 1000), "ms")
 
     # Loop through the batches for each file
+    watch_TEST_GET_PAGES.start()
     for file_name, terms in query_batches:
         # Get the postings for the terms in the current index file
-        watch_TEST_GET_PAGES.start()
         postings = file_system.get_pages_for_tokens(terms, file_name)
-        watch_TEST_GET_PAGES.stop()
-        print("TEST: get_pages_for_tokens() time = ", round(watch_TEST_SIEVE.read() * 1000), "ms")
 
         # Loop through the retrieved postings and associate the posting with the term in term_postings
         for next_posting in postings:
             next_term = next_posting[0].split(", ")[0]
 
             term_postings[next_term] = next_posting
+
+    watch_TEST_GET_PAGES.stop()
+    print("TEST: get_pages_for_tokens() time = ", round(watch_TEST_SIEVE.read() * 1000), "ms")
 
     watch_file_retrieval.stop()
     watch_ranking.start()
