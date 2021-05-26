@@ -278,6 +278,7 @@ def boolean_search_query(search_query, number_of_documents: int = 5):
 
 
 if __name__ == "__main__":
+    """
     from performance import Performance
 
     test_queries = ["python programming", "just code it", "dijkstra's algorithm",
@@ -306,6 +307,7 @@ if __name__ == "__main__":
 
         print()
         print()
+    """
 
     #pass
     #word_dict = ast.literal_eval("{'emphysema': {'1725': 2, '3027': 2, '25223': 1, '32922': 1, '49911': 3}}")
