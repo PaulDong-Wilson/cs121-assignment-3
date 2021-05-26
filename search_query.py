@@ -4,6 +4,7 @@ import math
 import heapq
 from collections import defaultdict
 from stopwatch import Stopwatch
+import re
 
 
 def normalize_vector(vector) -> None:
@@ -75,6 +76,32 @@ class DocumentVector:
         return sum((query_vector[i] * self.vector[i]) for i in range(len(query_vector)))
 
 
+def sieve_query_terms(query_terms: [str]) -> [(str, [str])]:
+    # To hold the different batches to send to the file system
+    query_term_batches = {"index_0-9.txt": [], "index_a-f.txt": [], "index_g-m.txt": [],
+                          "index_n-s.txt": [], "index_t-z.txt": []}
+
+    # Loop through the query terms
+    for query_term in query_terms:
+        # Sieve the next posting into the correct batch, according to its starting character
+        if len(query_term) == 0:
+            print(f"BAD QUERY TERM: query_term({query_term})")
+        if re.match(r"[0-9]", query_term[0]) is not None:
+            query_term_batches["index_0-9.txt"].append(query_term)
+        elif re.match(r"[a-f]", query_term[0]) is not None:
+            query_term_batches["index_a-f.txt"].append(query_term)
+        elif re.match(r"[g-m]", query_term[0]) is not None:
+            query_term_batches["index_g-m.txt"].append(query_term)
+        elif re.match(r"[n-s]", query_term[0]) is not None:
+            query_term_batches["index_n-s.txt"].append(query_term)
+        elif re.match(r"[t-z]", query_term[0]) is not None:
+            query_term_batches["index_t-z.txt"].append(query_term)
+        else:
+            print(f"BAD QUERY TERM: query_term({query_term})")
+
+    return [(file_name, terms) for file_name, terms in query_term_batches.items() if len(terms) != 0]
+
+
 def ranked_search_query(search_query, number_of_documents: int = 10):
     # To time the file retrieval and ranking individually
     watch_file_retrieval = Stopwatch()
@@ -96,8 +123,36 @@ def ranked_search_query(search_query, number_of_documents: int = 10):
     # To hold the number of terms already processed
     terms_processed = 0
 
+    # To hold the postings for the query's terms
+    term_postings = {}
+
+    # Get the query terms
+    query_term_list = [term for term in inverted_indexing.tokenize(search_query)]
+
+    # Get the posting for the query terms
+
+    watch_ranking.stop()
+    watch_file_retrieval.start()
+
+    # Sieve the query terms into batches for the different index files
+    query_batches = sieve_query_terms(query_term_list)
+
+    # Loop through the batches for each file
+    for file_name, terms in query_batches:
+        # Get the postings for the terms in the current index file
+        postings = file_system.get_pages_for_tokens(terms, file_name)
+
+        # Loop through the retrieved postings and associate the posting with the term in term_postings
+        for next_posting in postings:
+            next_term = next_posting[0].split(", ")[0]
+
+            term_postings[next_term] = next_posting
+
+    watch_file_retrieval.stop()
+    watch_ranking.start()
+
     # Process each of the query terms
-    for next_query_term in inverted_indexing.tokenize(search_query):
+    for next_query_term in query_term_list:
         # If this query term has not been seen before, capture its ordering and set its frequency to one
         if next_query_term not in query_frequencies:
             query_vector.append(next_query_term)
@@ -113,21 +168,21 @@ def ranked_search_query(search_query, number_of_documents: int = 10):
         next_score_map = {}
 
         # Get the posting for the current query term
-        watch_ranking.stop()
-        watch_file_retrieval.start()
-        term_posting = file_system.get_pages(next_query_term)
-        watch_file_retrieval.stop()
-        watch_ranking.start()
+        term_posting = term_postings.get(next_query_term, False)
 
         # If the token was found--
         if type(term_posting) is list:
             # Parse out the term and document frequency from the posting
             term, document_frequency = term_posting[0].split(", ")
+            document_frequency = int(document_frequency)
 
             # Loop through the rest of the posting and parse out the document ids and the tf-idf score
             for i in range(1, len(term_posting)):
                 next_document_id, next_token_frequency, next_tf_idf_score = term_posting[i].split(", ")
-                next_score_map[next_document_id] = float(next_tf_idf_score)
+                next_tf_idf_score = float(next_tf_idf_score)
+                next_token_frequency = int(next_token_frequency)
+
+                next_score_map[next_document_id] = next_tf_idf_score
 
         # Loop through the current DocumentVectors and extend their vector, given the constructed score map
         for next_document_vector in document_vectors:
@@ -167,7 +222,7 @@ def ranked_search_query(search_query, number_of_documents: int = 10):
 
     for i in range(number_of_documents):
         try:
-            results.append(heapq.heappop(document_scores_heap)[1])
+            results.append(heapq.heappop(document_scores_heap)[1]) # append only the popped docID
         except IndexError:
             break
 
@@ -225,20 +280,42 @@ def boolean_search_query(search_query, number_of_documents: int = 5):
     return document_list
 
 
-"""
-def get_top_num_ids(final_dict, number):
-    sort_dict = sorted(final_dict.items(), key=operator.itemgetter(1), reverse=True)[:number]
-    final_final_dict = [int(k) for k in dict(sort_dict).keys()]
-    return final_final_dict
-"""
-
-
 if __name__ == "__main__":
+    # TODO For testing
+    pass
+    """from performance import Performance
+
+    test_queries = ["python programming", "just code it", "dijkstra's algorithm",
+                    "ics 46 spring 2021 notes and examples", "best sorting algorithms",
+                    "python lists, dictionaries and sets", "stack pointers and memory allocation in programming",
+                    "data science and statistics",
+                    "Dynamic Programming vs. Recursion", "regular expression escape characters",
+                    "Reinforcement Learning", "uci computer science major class requirements",
+                    "computer science concentration information", "K-Means Clustering",
+                    "artificial intelligence data sets", "ics major academic advising",
+                    "computer science course prerequisites", "Difference between bayesians and frequentists",
+                    "hackuci hackathon event", "ics student council Board Applications"]
+
+    for next_test_query in test_queries:
+        performance_object = Performance(lambda: ranked_search_query(next_test_query))
+
+        while True:
+            try:
+                performance_object.evaluate(10)
+                performance_object.analyze(5, f"Query: '{next_test_query}'")
+                break
+            except Exception:
+                continue
+
+        print()
+        print()"""
+
+    #pass
     #word_dict = ast.literal_eval("{'emphysema': {'1725': 2, '3027': 2, '25223': 1, '32922': 1, '49911': 3}}")
     #print(type(word_dict))
     #token, postings_dict = list(word_dict.items())[0]
     #print(list(word_dict.items())[0])
-    a = find_search_query("emphysema")
+    #a = find_search_query("emphysema")
     #b = get_top_num_ids(a, 2)
     #print(b)
 
