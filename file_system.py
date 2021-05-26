@@ -140,8 +140,6 @@ def get_index_total():
     except IOError:
         return 0
 
-# returns list of pages associated with given token
-# return value = ["token, doc_count", "doc_id1, term_freq1", "doc_id2, term_freq2", ...]
 def get_pages(token):
     # finds what file the key would be in
     x = token[0].lower()
@@ -159,14 +157,40 @@ def get_pages(token):
     # searches file to find line with matching key
     for line in file:
         line = line[:-1]
-        # line anatomy:
-        # key, doc_count; doc_id, term_frequency; doc_id, term_frequency
         list = line.split("; ")
         if list[0].split(", ")[0] == token:
             file.close()
             return list
     file.close()
     return False
+
+def get_pages_for_tokens(tokens: [str], filename: str):
+    """
+            Calculates the cosine similarity this DocumentVector has with the specified query_vector.
+            The length of the query_vector must be equal to the length of this DocumentVector's vector.
+
+            :param tokens: List of tokens that are all in the same file.
+            :param filename: Name of file to read from.
+            :return: List of entries from the inverted index.
+                format: [ ["token, df", "docId, tf, tf-idf", ...], ...]
+    """
+    # make sure list is in alphabetical order
+    sortedTokens = sorted(tokens)
+    count = 0
+    file = open(filename, "r")
+    returnList = []
+    # searches file to find line with matching key
+    for line in file:
+        line = line[:-1]
+        list = line.split("; ")
+        if list[0].split(", ")[0] == sortedTokens[count]:
+            count = count+1
+            returnList.append(list)
+            if count == len(sortedTokens):
+                file.close()
+                return returnList
+    file.close()
+    return returnList
 
 if __name__ == "__main__":
     x = get_index_total()
