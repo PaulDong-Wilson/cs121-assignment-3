@@ -6,6 +6,9 @@ from collections import defaultdict
 from stopwatch import Stopwatch
 import re
 
+# TODO change later
+K = 10
+
 
 def normalize_vector(vector) -> None:
     """
@@ -106,8 +109,6 @@ def ranked_search_query(search_query, number_of_documents: int = 10):
     # To time the file retrieval and ranking individually
     watch_file_retrieval = Stopwatch()
     watch_ranking = Stopwatch()
-    watch_TEST_SIEVE = Stopwatch()
-    watch_TEST_GET_PAGES = Stopwatch()
     watch_ranking.start()
 
     # To hold the frequency of each query term
@@ -137,13 +138,9 @@ def ranked_search_query(search_query, number_of_documents: int = 10):
     watch_file_retrieval.start()
 
     # Sieve the query terms into batches for the different index files
-    watch_TEST_SIEVE.start()
     query_batches = sieve_query_terms(query_term_list)
-    watch_TEST_SIEVE.stop()
-    print("TEST: sieve time = ", round(watch_TEST_SIEVE.read() * 1000), "ms")
 
     # Loop through the batches for each file
-    watch_TEST_GET_PAGES.start()
     for file_name, terms in query_batches:
         # Get the postings for the terms in the current index file
         postings = file_system.get_pages_for_tokens(terms, file_name)
@@ -153,9 +150,6 @@ def ranked_search_query(search_query, number_of_documents: int = 10):
             next_term = next_posting[0].split(", ")[0]
 
             term_postings[next_term] = next_posting
-
-    watch_TEST_GET_PAGES.stop()
-    print("TEST: get_pages_for_tokens() time = ", round(watch_TEST_SIEVE.read() * 1000), "ms")
 
     watch_file_retrieval.stop()
     watch_ranking.start()
@@ -174,7 +168,8 @@ def ranked_search_query(search_query, number_of_documents: int = 10):
             continue
 
         # To hold the document IDs in the postings and their associated tf-idf scores
-        next_score_map = {}
+        relevant_score_map = {}
+        next_score_heap = []
 
         # Get the posting for the current query term
         term_posting = term_postings.get(next_query_term, False)
@@ -191,15 +186,27 @@ def ranked_search_query(search_query, number_of_documents: int = 10):
                 next_tf_idf_score = float(next_tf_idf_score)
                 next_token_frequency = int(next_token_frequency)
 
-                next_score_map[next_document_id] = next_tf_idf_score
+                # next_score_map[next_document_id] = next_tf_idf_score
+                next_score_heap.append((-next_tf_idf_score, next_document_id))
+
+        # Heapify the document scores into a MaxHeap
+        heapq.heapify(next_score_heap)
+
+        # Pop a reasonable amount of relevant doc ids from the heap and add them to the document vectors
+        for i in range(K):
+            try:
+                next_relevant_score = heapq.heappop(next_score_heap)
+                relevant_score_map[next_relevant_score[1]] = -next_relevant_score[0]
+            except IndexError:
+                break
 
         # Loop through the current DocumentVectors and extend their vector, given the constructed score map
         for next_document_vector in document_vectors:
-            next_document_vector.extend_vector(next_score_map)
+            next_document_vector.extend_vector(relevant_score_map)
 
         # The remaining tf-idf scores in the score map go to DocumentVectors that have not been seen yet,
         # construct new DocumentVectors for those tf-idf scores
-        for next_doc_id, next_tf_idf_score in next_score_map.items():
+        for next_doc_id, next_tf_idf_score in relevant_score_map.items():
             new_vector = [0.0 for i in range(terms_processed)] # Assume all zeros for all previous query terms
             new_vector.append(next_tf_idf_score)
             document_vectors.append(DocumentVector(next_doc_id, new_vector))
@@ -290,9 +297,7 @@ def boolean_search_query(search_query, number_of_documents: int = 5):
 
 
 if __name__ == "__main__":
-    # TODO For testing
-    pass
-    """from performance import Performance
+    from performance import Performance
 
     test_queries = ["python programming", "just code it", "dijkstra's algorithm",
                     "ics 46 spring 2021 notes and examples", "best sorting algorithms",
@@ -317,7 +322,7 @@ if __name__ == "__main__":
                 continue
 
         print()
-        print()"""
+        print()
 
     #pass
     #word_dict = ast.literal_eval("{'emphysema': {'1725': 2, '3027': 2, '25223': 1, '32922': 1, '49911': 3}}")
