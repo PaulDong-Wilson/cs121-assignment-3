@@ -109,6 +109,8 @@ def ranked_search_query(search_query, number_of_documents: int = 10):
     # To time the file retrieval and ranking individually
     watch_file_retrieval = Stopwatch()
     watch_ranking = Stopwatch()
+    watch_TEST_SIEVE = Stopwatch()
+    watch_TEST_GET_PAGES = Stopwatch()
     watch_ranking.start()
 
     # To hold the frequency of each query term
@@ -138,9 +140,13 @@ def ranked_search_query(search_query, number_of_documents: int = 10):
     watch_file_retrieval.start()
 
     # Sieve the query terms into batches for the different index files
+    watch_TEST_SIEVE.start()
     query_batches = sieve_query_terms(query_term_list)
+    watch_TEST_SIEVE.stop()
+    print("TEST: sieve time = ", round(watch_TEST_SIEVE.read() * 1000), "ms")
 
     # Loop through the batches for each file
+    watch_TEST_GET_PAGES.start()
     for file_name, terms in query_batches:
         # Get the postings for the terms in the current index file
         postings = file_system.get_pages_for_tokens(terms, file_name)
@@ -150,6 +156,9 @@ def ranked_search_query(search_query, number_of_documents: int = 10):
             next_term = next_posting[0].split(", ")[0]
 
             term_postings[next_term] = next_posting
+
+    watch_TEST_GET_PAGES.stop()
+    print("TEST: get_pages_for_tokens() time = ", round(watch_TEST_SIEVE.read() * 1000), "ms")
 
     watch_file_retrieval.stop()
     watch_ranking.start()
