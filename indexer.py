@@ -114,9 +114,15 @@ if __name__ == "__main__":
     # add tf-idf scores to the whole index
     file_system.add_tf_idf()
 
+    # Combine the index files into a single sorted index file
+    file_system.combine_index_files()
+
+    # Create the auxiliary positional index
+    file_system.build_positional_index()
+
     # Calculate the size of the resulting index on disk (in KBs)
     # File size calculation setup adapted from https://amiradata.com/python-get-file-size-in-kb-mb-or-gb/
-    files = ["index_0-9.txt", "index_a-f.txt", "index_g-m.txt", "index_n-s.txt", "index_t-z.txt", "document_ids.txt"]
+    files = ["index_combined.txt", "positional_index.txt", "index_info.txt", "document_ids.txt"]
     file_system_size = round(sum(os.path.getsize(next_file) for next_file in files) / 1024, 3)
 
     # Printout the indexer report

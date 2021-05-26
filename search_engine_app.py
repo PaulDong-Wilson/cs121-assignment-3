@@ -1,5 +1,6 @@
 from flask import Flask, flash, render_template, request
 from search_query import ranked_search_query
+from file_system import read_positional_index
 from stopwatch import Stopwatch
 
 # To hold the file location for document IDs
@@ -26,6 +27,9 @@ def create_app(test_config=None):
             next_id, next_url = next_line.rstrip().split("; ")
             document_id_lookups[next_id] = next_url
 
+    # Load in the positional index
+    positional_index = read_positional_index()
+
     # Define the routine that runs when the webserver is accessed at http://127.0.0.1:5000/
     @app.route('/', methods=['GET', 'POST'])
     def query_screen():
@@ -39,7 +43,7 @@ def create_app(test_config=None):
 
             # Retrieve the document ids for the given query and lookup their associated urls, while also timing it
             watch.start()
-            retrieved_ids, file_retrieval_time, ranking_time = ranked_search_query(search_query)
+            retrieved_ids, file_retrieval_time, ranking_time = ranked_search_query(search_query, positional_index)
             associated_urls = [document_id_lookups[next_id] for next_id in retrieved_ids]
             watch.stop()
 

@@ -218,6 +218,149 @@ def combine_index_files():
                 for line in infile:
                     outfile.write(line)
 
+
+# Builds the positional index to facilitate file seeking
+def build_positional_index():
+    # To hold the positional ranges for each word start
+    positional_index = {}
+
+    location = 0
+    previous_word_start = ""
+
+    # The index file to generate a positional index for
+    index_file = "index_combined.txt"
+
+    # Open the index file and get the word starts within it
+    with open(index_file, "r") as file_stream:
+
+        # Loop through the lines in the file
+        for next_line in file_stream:
+            # Get all characters from the current line up to (but not including) the first comma
+            # Strip the remaining characters
+            clean_line = next_line[0:next_line.find(",")].rstrip()
+
+            # If the line is empty, simply continue to the next one
+            if len(clean_line) == 0:
+                continue
+
+            # To hold the next word start
+            next_word_start = ""
+
+            # If the line only has one character, set it as the word start for this line
+            if len(clean_line) == 1:
+                next_word_start = clean_line
+
+            # If the first character of this word matches the second character, simply set the first character
+            # as the word start
+            elif clean_line[0] == clean_line[1]:
+                next_word_start = clean_line[0]
+
+            # Otherwise, use the first two characters as the start of this word
+            else:
+                next_word_start = clean_line[0:2]
+
+            # If the current word start has not been seen yet
+            if next_word_start not in positional_index:
+                # If this word start is the first word start
+                if len(positional_index) == 0:
+
+                    # simply add associate it with the current location
+                    positional_index[next_word_start] = location
+
+                # Otherwise, complete the end location for the previous word start, and enter the current location
+                # for this word start
+                else:
+                    positional_index[previous_word_start] = (positional_index[previous_word_start], location)
+                    positional_index[next_word_start] = location
+
+                # Set the current word start as the new previous word start
+                previous_word_start = next_word_start
+
+            # Keep track of the current location
+            location += len(next_line) + 1
+
+    # Complete the end range of the last word start
+    positional_index[previous_word_start] = (positional_index[previous_word_start], location)
+
+    # Output the ranges to the file
+    with open("positional_index.txt", "w") as file_stream:
+        for next_start, next_range in sorted(positional_index.items(), key=lambda x: (x[0])):
+            print(f"{next_start}; {repr(next_range)}", file=file_stream)
+
+
+def read_positional_index() -> {str: (int, int)}:
+    # To hold the positional index as it is read in
+    positional_index = {}
+
+    # Open and read in the positional index file, then return it
+    with open("positional_index.txt", "r") as file_stream:
+        # Loop through each of the lines in the file
+        for next_line in file_stream:
+            # Split the line into its separate parts
+            line_parts = next_line.rstrip().split("; ")
+
+            # If the line was empty, continue to the next line
+            if len(line_parts) == 0:
+                continue
+
+            # Differentiate the line parts as the next word start and next range
+            next_start, next_range = line_parts
+
+            # Associate the next word start with its positional range
+            positional_index[next_start] = eval(next_range)
+
+    return positional_index
+
+
+def seek_postings_for(terms: {str}, positional_index: {str: (int, int)}) -> {str: [str]}:
+    # To hold the read postings for the given terms
+    postings = {}
+
+    # To hold the locations of each term's 1-character or 2-character word start
+    locations = {}
+
+    # Loop through the terms and determine the starting positions of their word starts
+    for next_term in terms:
+
+        if (len(next_term) == 1) and (next_term in positional_index):
+            locations[next_term] = positional_index[next_term]
+
+        elif next_term[0:2] in positional_index:
+            locations[next_term] = positional_index[next_term[0:2]]
+
+        # If the current term's word start is not in the positional index, the term is not in the index at all
+        # Set its posting to None
+        else:
+            postings[next_term] = None
+
+    # Open the index in BINARY mode, then seek through it looking for the term postings
+    with open("index_combined.txt", "rb") as file_stream:
+
+        # Loop through the terms and term location ranges
+        for next_word, next_range in sorted(locations.items(), key=lambda x: (x[0])):
+            # Differentiate the start and end point of this term's location range
+            next_start, next_end = next_range
+
+            # Seek to the new starting point from the current position
+            # (it's VERY important that this seek is relative to the current position)
+            file_stream.seek(next_start - file_stream.tell(), 1)
+
+            # Loop while the current location in the file is not at the end of this term's location range
+            while file_stream.tell() < next_end:
+                # Clean up the line and parse out the term
+                clean_line = file_stream.readline().decode('utf-8').rstrip()
+                read_word = clean_line[0:clean_line.find(",")]
+
+                # If the term is the next word to be found, split out its posting and associate it with the term,
+                # and add it to the set of found terms
+                if next_word == read_word:
+                    postings[next_word] = clean_line.split("; ")
+                    break
+
+    # Return the postings associated with each of the given terms (or None, if no posting was in the index for the term)
+    return postings
+
+
 if __name__ == "__main__":
     x = get_index_total()
     print(x)

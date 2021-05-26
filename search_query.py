@@ -6,9 +6,6 @@ from collections import defaultdict
 from stopwatch import Stopwatch
 import re
 
-# TODO change later
-K = 10
-
 
 def normalize_vector(vector) -> None:
     """
@@ -105,7 +102,7 @@ def sieve_query_terms(query_terms: [str]) -> [(str, [str])]:
     return [(file_name, terms) for file_name, terms in query_term_batches.items() if len(terms) != 0]
 
 
-def ranked_search_query(search_query, number_of_documents: int = 10):
+def ranked_search_query(search_query, positional_index: {str: (int, int)}, number_of_documents: int = 10):
     # To time the file retrieval and ranking individually
     watch_file_retrieval = Stopwatch()
     watch_ranking = Stopwatch()
@@ -126,9 +123,6 @@ def ranked_search_query(search_query, number_of_documents: int = 10):
     # To hold the number of terms already processed
     terms_processed = 0
 
-    # To hold the postings for the query's terms
-    term_postings = {}
-
     # Get the query terms
     query_term_list = [term for term in inverted_indexing.tokenize(search_query)]
 
@@ -137,19 +131,7 @@ def ranked_search_query(search_query, number_of_documents: int = 10):
     watch_ranking.stop()
     watch_file_retrieval.start()
 
-    # Sieve the query terms into batches for the different index files
-    query_batches = sieve_query_terms(query_term_list)
-
-    # Loop through the batches for each file
-    for file_name, terms in query_batches:
-        # Get the postings for the terms in the current index file
-        postings = file_system.get_pages_for_tokens(terms, file_name)
-
-        # Loop through the retrieved postings and associate the posting with the term in term_postings
-        for next_posting in postings:
-            next_term = next_posting[0].split(", ")[0]
-
-            term_postings[next_term] = next_posting
+    term_postings = file_system.seek_postings_for(set(query_term_list), positional_index)
 
     watch_file_retrieval.stop()
     watch_ranking.start()
@@ -164,7 +146,6 @@ def ranked_search_query(search_query, number_of_documents: int = 10):
         # Otherwise, this query term has been seen before; increment its frequency and move to the next term
         else:
             query_frequencies[next_query_term] += 1
-            terms_processed += 1
             continue
 
         # To hold the document IDs in the postings and their associated tf-idf scores
@@ -172,10 +153,10 @@ def ranked_search_query(search_query, number_of_documents: int = 10):
         next_score_heap = []
 
         # Get the posting for the current query term
-        term_posting = term_postings.get(next_query_term, False)
+        term_posting = term_postings.get(next_query_term, None)
 
         # If the token was found--
-        if type(term_posting) is list:
+        if term_posting is not None:
             # Parse out the term and document frequency from the posting
             term, document_frequency = term_posting[0].split(", ")
             document_frequency = int(document_frequency)
@@ -193,7 +174,7 @@ def ranked_search_query(search_query, number_of_documents: int = 10):
         heapq.heapify(next_score_heap)
 
         # Pop a reasonable amount of relevant doc ids from the heap and add them to the document vectors
-        for i in range(K):
+        for i in range(10):
             try:
                 next_relevant_score = heapq.heappop(next_score_heap)
                 relevant_score_map[next_relevant_score[1]] = -next_relevant_score[0]
@@ -310,8 +291,10 @@ if __name__ == "__main__":
                     "computer science course prerequisites", "Difference between bayesians and frequentists",
                     "hackuci hackathon event", "ics student council Board Applications"]
 
+    positional_index = file_system.read_positional_index()
+
     for next_test_query in test_queries:
-        performance_object = Performance(lambda: ranked_search_query(next_test_query))
+        performance_object = Performance(lambda: ranked_search_query(next_test_query, positional_index))
 
         while True:
             try:
